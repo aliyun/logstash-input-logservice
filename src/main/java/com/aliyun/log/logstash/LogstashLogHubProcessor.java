@@ -9,9 +9,9 @@ import com.aliyun.openservices.loghub.client.ILogHubCheckPointTracker;
 import com.aliyun.openservices.loghub.client.exceptions.LogHubCheckPointException;
 import com.aliyun.openservices.loghub.client.interfaces.ILogHubProcessor;
 import com.aliyun.openservices.loghub.client.interfaces.ILogHubProcessorFactory;
-import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +19,7 @@ import java.util.Map;
 import static javax.management.timer.Timer.ONE_SECOND;
 
 public class LogstashLogHubProcessor implements ILogHubProcessor {
-    private Logger logger;
+    private static final Logger logger = LogManager.getLogger(LogstashLogHubProcessor.class);
     //shard id
     private int shardId;
     // 记录上次持久化 checkpoint 的时间
@@ -117,12 +117,6 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
         this.includeMeta = includeMeta;
     }
 
-    public void setLogger(Object obj) throws NoSuchFieldException, IllegalAccessException {
-        Class aClass = obj.getClass();
-        Field field = aClass.getDeclaredField("logger");
-        field.setAccessible(true);
-        this.logger = (Logger) field.get(obj);
-    }
 }
 
 class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {

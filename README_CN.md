@@ -63,9 +63,11 @@ output {
 
 ## 安装插件
 
-* 注意：如果修改了源码需要先编译，否则可直接安装
+* 注意：如果没有修改源码可直接安装
 
-- 编译 插件
+下载地址：[logstash-input-sls-0.0.1.gem](https://github.com/aliyun/logstash-input-logservice/raw/master/logstash-input-sls-0.0.1.gem)
+
+- 构建 插件
 
 ```sh
 gem build logstash-input-sls.gemspec

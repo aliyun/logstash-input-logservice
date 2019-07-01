@@ -55,7 +55,6 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     @handler = LogHubProcessor.new()
     @handler.setCheckpointSecond(@checkpoint_second)
     @handler.setIncludeMeta(@include_meta)
-    @handler.setLogger(@logger)
     @handler.queue = queue
     LogHubStarter.startWorker(@handler, @endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix, @position)
     rescue Exception => e
