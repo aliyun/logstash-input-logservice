@@ -76,7 +76,7 @@ gem build logstash-input-sls.gemspec
 - 安装 日志服务 input 插件
 
 ```sh
-logstash-plugin install logstash-input-sls-0.0.1.gem
+logstash-plugin install --local logstash-input-sls-0.0.1.gem
 ```
 
 - 启动 Logstash
