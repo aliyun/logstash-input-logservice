@@ -51,12 +51,13 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     if @consumer_name_with_ip
         @ip_suffix = '_' + @local_address
     end
+    @process_pid = "_#{Process.pid}"
     @logger.info("Running logstash-input-logservice",:local_address => @local_address)
     @handler = LogHubProcessor.new()
     @handler.setCheckpointSecond(@checkpoint_second)
     @handler.setIncludeMeta(@include_meta)
     @handler.queue = queue
-    LogHubStarter.startWorker(@handler, @endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix, @position)
+    LogHubStarter.startWorker(@handler, @endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position)
     rescue Exception => e
         @logger.error("Start logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
             :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,
