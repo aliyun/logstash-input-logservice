@@ -3,6 +3,8 @@ require "logstash/namespace"
 require "logstash/event"
 require "logstash/environment"
 require "logstash/inputs/base"
+require 'json'
+require "stud/interval"
 
 root_dir = File.expand_path(File.join(File.dirname(__FILE__), ".."))
 LogStash::Environment.load_runtime_jars! File.join(root_dir, "vendor")
@@ -16,14 +18,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     super(*args)
   end
 
-  class LogHubProcessor < LogstashLogHubProcessor
-    attr_accessor :queue
-    def showContent(logmap)
-        event = LogStash::Event.new(logmap)
-        # this will block if output_queue is full. output_queue size is 20
-        @queue << event
-    end
-  end
+  default :codec, "json"
 
   config_name "logservice"
 
@@ -38,6 +33,8 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   config :checkpoint_second, :validate => :number, :default => 30
   config :include_meta, :validate => :boolean, :default => true
   config :consumer_name_with_ip, :validate => :boolean, :default => true
+  config :queue_size, :validate => :number, :default => 1000
+  Processor = com.aliyun.log.logstash
   public
   def register
     @logger.info("Init logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
@@ -53,15 +50,35 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     end
     @process_pid = "_#{Process.pid}"
     @logger.info("Running logstash-input-logservice",:local_address => @local_address)
-    @handler = LogHubProcessor.new()
-    @handler.setCheckpointSecond(@checkpoint_second)
-    @handler.setIncludeMeta(@include_meta)
-    @handler.queue = queue
-    LogHubStarter.startWorker(@handler, @endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position)
+    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @queue_size)
+   
+    consume(queue)
     rescue Exception => e
         @logger.error("Start logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
             :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,
             :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip, :exception => e)
+
+  end
+  
+  def consume(queue)
+         while !stop?
+             while !Processor.LogstashLogHubProcessor.queueCache.isEmpty
+                 textmap = Processor.LogstashLogHubProcessor.queueCache.poll
+                 event = LogStash::Event.new(textmap)
+                 decorate(event)
+                 queue << event
+             end
+          Stud.stoppable_sleep(@checkpoint_second) { stop? }
+        end # loop
+
+  end  
+
+  def stop
+    # nothing to do in this case so it is not necessary to define stop
+    # examples of common "stop" tasks:
+    #  * close sockets (unblocking blocking reads/accepts)
+    #  * cleanup temporary files
+    #  * terminate spawned threads
   end
 
   def teardown

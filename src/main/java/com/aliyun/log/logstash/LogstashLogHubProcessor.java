@@ -15,11 +15,19 @@ import org.apache.logging.log4j.Logger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static javax.management.timer.Timer.ONE_SECOND;
 
 public class LogstashLogHubProcessor implements ILogHubProcessor {
     private static final Logger logger = LogManager.getLogger(LogstashLogHubProcessor.class);
+    /**
+     * 缓存 从sls中拉取的数据
+     */
+
+    public volatile static BlockingQueue<Map<String, String>> queueCache = new LinkedBlockingQueue<>(1000);
     //shard id
     private int shardId;
     // 记录上次持久化 checkpoint 的时间
@@ -33,14 +41,22 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
     //上次日志输出到现在接收的日志数
     //在每次更新checkpoint的时候输出，并置为0
     private long mNowLogs = 0;
+    private int capacity = 1000;
     @Override
     public void initialize(int shardId) {
         this.shardId = shardId;
     }
+    
+    public LogstashLogHubProcessor(int capacity) {
+        this.capacity = capacity;
+        queueCache = new LinkedBlockingQueue<>(capacity);
+    }
 
     protected void showContent(Map<String, String> logMap) {
-        for (Map.Entry content : logMap.entrySet()) {
-            System.out.println(content.getKey() + "\t:\t" + content.getValue());
+        try {
+            queueCache.put(logMap);
+        } catch (InterruptedException e) {
+            logger.error("put result data to queue cache failed!", e);
         }
     }
 
@@ -120,15 +136,16 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
 }
 
 class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
-    ILogHubProcessor processor;
 
-    public LogstashLogHubProcessorFactory(ILogHubProcessor processor) {
-        this.processor = processor;
+    private int capacity;
+    
+    public LogstashLogHubProcessorFactory(int capacity) {
+       this.capacity = capacity;
     }
 
     @Override
     public ILogHubProcessor generatorProcessor() {
         // 生成一个消费实例
-        return processor;
+        return new LogstashLogHubProcessor(this.capacity);
     }
 }
