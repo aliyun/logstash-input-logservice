@@ -27,7 +27,7 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
      * 缓存 从sls中拉取的数据
      */
 
-    public volatile static BlockingQueue<Map<String, String>> queueCache = new LinkedBlockingQueue<>(1000);
+
     //shard id
     private int shardId;
     // 记录上次持久化 checkpoint 的时间
@@ -42,13 +42,16 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
     //在每次更新checkpoint的时候输出，并置为0
     private long mNowLogs = 0;
     private int capacity = 1000;
+    public volatile static BlockingQueue<Map<String, String>> queueCache = new LinkedBlockingQueue<>(1000);
     @Override
     public void initialize(int shardId) {
         this.shardId = shardId;
     }
     
-    public LogstashLogHubProcessor(int capacity) {
+    public LogstashLogHubProcessor(int capacity, int checkpointSecond, boolean includeMeta) {
         this.capacity = capacity;
+        this.checkpointSecond = checkpointSecond;
+        this.includeMeta = includeMeta;
         queueCache = new LinkedBlockingQueue<>(capacity);
     }
 
@@ -138,14 +141,18 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
 class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
 
     private int capacity;
+    private int checkpointSecond;
+    private boolean includeMeta;
     
-    public LogstashLogHubProcessorFactory(int capacity) {
+    public LogstashLogHubProcessorFactory(int capacity, int checkpointSecond, boolean includeMeta) {
        this.capacity = capacity;
+       this.checkpointSecond = checkpointSecond;
+       this.includeMeta = includeMeta;
     }
 
     @Override
     public ILogHubProcessor generatorProcessor() {
         // 生成一个消费实例
-        return new LogstashLogHubProcessor(this.capacity);
+        return new LogstashLogHubProcessor(this.capacity, this.checkpointSecond, this.includeMeta);
     }
 }
