@@ -50,20 +50,12 @@ This plugin supports the following configuration options
 
 ## Install the plugin
 
-[logstash-input-sls-0.0.2.gem](https://github.com/aliyun/logstash-input-logservice/raw/master/logstash-input-sls-0.0.2.gem)
-
 you can build the gem and install it using:
-
-- Build your plugin gem
-
-```sh
-gem build logstash-input-sls.gemspec
-```
 
 - Install the plugin from the Logstash home
 
 ```sh
-logstash-plugin install --local logstash-input-sls-0.0.2.gem
+logstash-plugin install logstash-input-sls
 ```
 
 - Start Logstash

@@ -3,8 +3,6 @@ package com.aliyun.log.logstash;
 import com.aliyun.openservices.loghub.client.ClientWorker;
 import com.aliyun.openservices.loghub.client.config.LogHubConfig;
 import com.aliyun.openservices.loghub.client.exceptions.LogHubClientWorkerException;
-import com.aliyun.openservices.loghub.client.interfaces.ILogHubProcessor;
-import org.apache.log4j.Logger;
 
 import java.sql.Timestamp;
 
@@ -12,7 +10,6 @@ import static javax.management.timer.Timer.ONE_SECOND;
 
 
 public class LogHubStarter {
-    private static Logger logger = Logger.getLogger(LogHubStarter.class);
 
     //public static void startWorker(ILogHubProcessor processor,
     public static void startWorker(String endpoint, String accessId, String accessKey,

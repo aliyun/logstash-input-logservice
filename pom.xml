@@ -16,13 +16,8 @@
     <dependencies>
         <dependency>
             <groupId>com.aliyun.openservices</groupId>
-            <artifactId>aliyun-log</artifactId>
-            <version>0.6.35</version>
-        </dependency>
-        <dependency>
-            <groupId>com.aliyun.openservices</groupId>
             <artifactId>loghub-client-lib</artifactId>
-            <version>0.6.16</version>
+            <version>0.6.36</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
         <dependency>

@@ -63,20 +63,10 @@ output {
 
 ## 安装插件
 
-* 注意：如果没有修改源码可直接安装
-
-下载地址：[logstash-input-sls-0.0.2.gem](https://github.com/aliyun/logstash-input-logservice/raw/master/logstash-input-sls-0.0.2.gem)
-
-- 构建 插件
-
-```sh
-gem build logstash-input-sls.gemspec
-```
-
 - 安装 日志服务 input 插件
 
 ```sh
-logstash-plugin install --local logstash-input-sls-0.0.2.gem
+logstash-plugin install logstash-input-sls
 ```
 
 - 启动 Logstash
