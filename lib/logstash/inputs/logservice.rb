@@ -63,10 +63,17 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   def consume(queue)
          while !stop?
              while !Processor.LogstashLogHubProcessor.queueCache.isEmpty
-                 textmap = Processor.LogstashLogHubProcessor.queueCache.poll
-                 event = LogStash::Event.new(textmap)
-                 decorate(event)
-                 queue << event
+                 begin
+                     textmap = Processor.LogstashLogHubProcessor.queueCache.poll
+                     event = LogStash::Event.new(textmap)
+                     decorate(event)
+                     queue << event
+                 rescue Exception => e
+                     @logger.error("Consume logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
+                                 :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,
+                                 :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip, :exception => e)
+                     retry
+                 end
              end
           Stud.stoppable_sleep(@checkpoint_second) { stop? }
         end # loop
