@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static javax.management.timer.Timer.ONE_SECOND;
@@ -41,18 +40,15 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
     //上次日志输出到现在接收的日志数
     //在每次更新checkpoint的时候输出，并置为0
     private long mNowLogs = 0;
-    private int capacity = 1000;
-    public volatile static BlockingQueue<Map<String, String>> queueCache = new LinkedBlockingQueue<>(1000);
+    public static BlockingQueue<Map<String, String>> queueCache = new LinkedBlockingQueue<>(1000);
     @Override
     public void initialize(int shardId) {
         this.shardId = shardId;
     }
     
-    public LogstashLogHubProcessor(int capacity, int checkpointSecond, boolean includeMeta) {
-        this.capacity = capacity;
+    public LogstashLogHubProcessor(int checkpointSecond, boolean includeMeta) {
         this.checkpointSecond = checkpointSecond;
         this.includeMeta = includeMeta;
-        queueCache = new LinkedBlockingQueue<>(capacity);
     }
 
     protected void showContent(Map<String, String> logMap) {
@@ -67,6 +63,7 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
     @Override
     public String process(List<LogGroupData> logGroups,
                           ILogHubCheckPointTracker checkPointTracker) {
+        logger.info("process_in_shardId:" + shardId);
         int count = 0;
         // 这里简单的将获取到的数据打印出来
         for (LogGroupData logGroup : logGroups) {
@@ -94,7 +91,7 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
             mNowLogs = mNowLogs + flg.getLogsCount();
         }
         if (count > 0) {
-            logger.debug("shardId:" + shardId + " input:" + count + " totalLogs:" + mTotalLogs + " nowLogs:" + mNowLogs);
+            logger.info("process_shardId:" + shardId + " input:" + count + " totalLogs:" + mTotalLogs + " nowLogs:" + mNowLogs);
         }
         long curTime = System.currentTimeMillis();
         // 每隔 30 秒，写一次 check point 到服务端，如果 10 秒内，worker crash，
@@ -104,13 +101,14 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
                 //参数true表示立即将checkpoint更新到服务端，为false会将checkpoint缓存在本地，后台默认隔60s会将checkpoint刷新到服务端。
                 checkPointTracker.saveCheckPoint(true);
                 mNowLogs = 0;
-                logger.info("shardId:" + shardId +" saveCheckPoint " + checkPointTracker.getCheckPoint());
+                logger.info("process_shardId:" + shardId +" saveCheckPoint " + checkPointTracker.getCheckPoint());
             } catch (LogHubCheckPointException e) {
                 e.printStackTrace();
-                logger.error("shardId:" + shardId + " saveCheckPoint ", e);
+                logger.error("process_shardId:" + shardId + " saveCheckPoint ", e);
             }
             mLastCheckTime = curTime;
         }
+        logger.info("process_out_shardId:" + shardId);
         return null;
     }
 
@@ -120,10 +118,10 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
         //将消费断点保存到服务端。
         try {
             checkPointTracker.saveCheckPoint(true);
-            logger.info("shardId:" + shardId +" saveCheckPoint:" + checkPointTracker.getCheckPoint());
+            logger.info("shutdown_shardId:" + shardId +" saveCheckPoint:" + checkPointTracker.getCheckPoint());
         } catch (LogHubCheckPointException e) {
             e.printStackTrace();
-            logger.error("shardId:" + shardId + " shutdown ", e);
+            logger.error("shutdown_shardId:" + shardId + " shutdown ", e);
         }
     }
 
@@ -140,12 +138,10 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
 
 class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
 
-    private int capacity;
     private int checkpointSecond;
     private boolean includeMeta;
     
-    public LogstashLogHubProcessorFactory(int capacity, int checkpointSecond, boolean includeMeta) {
-       this.capacity = capacity;
+    public LogstashLogHubProcessorFactory(int checkpointSecond, boolean includeMeta) {
        this.checkpointSecond = checkpointSecond;
        this.includeMeta = includeMeta;
     }
@@ -153,6 +149,6 @@ class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
     @Override
     public ILogHubProcessor generatorProcessor() {
         // 生成一个消费实例
-        return new LogstashLogHubProcessor(this.capacity, this.checkpointSecond, this.includeMeta);
+        return new LogstashLogHubProcessor(this.checkpointSecond, this.includeMeta);
     }
 }

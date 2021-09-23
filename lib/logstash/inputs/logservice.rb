@@ -53,6 +53,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @queue_size)
    
     consume(queue)
+
     rescue Exception => e
         @logger.error("Start logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
             :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,

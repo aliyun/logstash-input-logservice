@@ -28,7 +28,7 @@ public class LogHubStarter {
             config = new LogHubConfig(consumerGroup, consumer, endpoint, project, logstore, accessId, accessKey, time);
         }
         //ClientWorker worker = new ClientWorker(new LogstashLogHubProcessorFactory(processor), config);
-        ClientWorker worker = new ClientWorker(new LogstashLogHubProcessorFactory(queueSize, checkpointSecond, includeMeta), config);
+        ClientWorker worker = new ClientWorker(new LogstashLogHubProcessorFactory(checkpointSecond, includeMeta), config);
         Thread thread = new Thread(worker);
         //Thread运行之后，Client Worker会自动运行，ClientWorker扩展了Runnable接口。
         thread.start();
