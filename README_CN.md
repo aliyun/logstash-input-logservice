@@ -94,7 +94,7 @@ input {
   project => "test-project"
   logstore => "logstore1"
   consumer_group => "consumer_group1"
-  consumer => "consumer1"
+  consumer_name => "consumer1"
   position => "end"
   checkpoint_second => 30
   include_meta => true
