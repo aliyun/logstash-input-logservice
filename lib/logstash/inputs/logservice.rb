@@ -33,7 +33,6 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   config :checkpoint_second, :validate => :number, :default => 30
   config :include_meta, :validate => :boolean, :default => true
   config :consumer_name_with_ip, :validate => :boolean, :default => true
-  config :queue_size, :validate => :number, :default => 1000
   Processor = com.aliyun.log.logstash
   public
   def register
@@ -50,7 +49,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     end
     @process_pid = "_#{Process.pid}"
     @logger.info("Running logstash-input-logservice",:local_address => @local_address)
-    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @queue_size)
+    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta)
    
     consume(queue)
 
