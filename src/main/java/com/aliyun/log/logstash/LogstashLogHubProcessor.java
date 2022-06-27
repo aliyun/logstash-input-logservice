@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import static javax.management.timer.Timer.ONE_SECOND;
 
@@ -43,21 +42,22 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
 
     private String consumerName;
 
-    public static BlockingQueue<Map<String, String>> queueCache = new LinkedBlockingQueue<>(1000);
+    private BlockingQueue<Map<String, String>> queueCache;
     @Override
     public void initialize(int shardId) {
         this.shardId = shardId;
     }
     
-    public LogstashLogHubProcessor(int checkpointSecond, boolean includeMeta, String consumerName) {
+    public LogstashLogHubProcessor(int checkpointSecond, boolean includeMeta, String consumerName, BlockingQueue<Map<String, String>> queueCache) {
         this.checkpointSecond = checkpointSecond;
         this.includeMeta = includeMeta;
         this.consumerName = consumerName;
+        this.queueCache = queueCache;
     }
 
     protected void showContent(Map<String, String> logMap) {
         try {
-            queueCache.put(logMap);
+            this.queueCache.put(logMap);
         } catch (InterruptedException e) {
             logger.error("put result data to queue cache failed!", e);
         }
@@ -145,16 +145,18 @@ class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
     private int checkpointSecond;
     private boolean includeMeta;
     private String consumerName;
+    private BlockingQueue<Map<String, String>> queueCache;
     
-    public LogstashLogHubProcessorFactory(int checkpointSecond, boolean includeMeta, String consumerName) {
+    public LogstashLogHubProcessorFactory(int checkpointSecond, boolean includeMeta, String consumerName, BlockingQueue<Map<String, String>> queueCache) {
        this.checkpointSecond = checkpointSecond;
        this.includeMeta = includeMeta;
-        this.consumerName = consumerName;
+       this.consumerName = consumerName;
+       this.queueCache = queueCache;
     }
 
     @Override
     public ILogHubProcessor generatorProcessor() {
         // 生成一个消费实例
-        return new LogstashLogHubProcessor(this.checkpointSecond, this.includeMeta, this.consumerName);
+        return new LogstashLogHubProcessor(this.checkpointSecond, this.includeMeta, this.consumerName, this.queueCache);
     }
 }

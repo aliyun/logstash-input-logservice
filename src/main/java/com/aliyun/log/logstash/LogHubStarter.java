@@ -5,6 +5,8 @@ import com.aliyun.openservices.loghub.client.config.LogHubConfig;
 import com.aliyun.openservices.loghub.client.exceptions.LogHubClientWorkerException;
 
 import java.sql.Timestamp;
+import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 
 import static javax.management.timer.Timer.ONE_SECOND;
 
@@ -13,7 +15,8 @@ public class LogHubStarter {
 
     public static void startWorker(String endpoint, String accessId, String accessKey,
                                    String project, String logstore,
-                                   String consumerGroup, String consumer, String position, int checkpointSecond, boolean includeMeta) throws LogHubClientWorkerException {
+                                   String consumerGroup, String consumer, String position,
+                                   int checkpointSecond, boolean includeMeta, BlockingQueue<Map<String, String>> queueCache) throws LogHubClientWorkerException {
         // 第二个参数是消费者名称，同一个消费组下面的消费者名称必须不同，可以使用相同的消费组名称，
         // 不同的消费者名称在多台机器上启动多个进程，来均衡消费一个Logstore，这个时候消费者名称可以使用机器ip来区分。
         // 第9个参数（maxFetchLogGroupSize）是每次从服务端获取的LogGroup数目，使用默认值即可，如有调整请注意取值范围(0,1000]
@@ -26,7 +29,7 @@ public class LogHubStarter {
             int time = (int) (Timestamp.valueOf(position).getTime() / ONE_SECOND);
             config = new LogHubConfig(consumerGroup, consumer, endpoint, project, logstore, accessId, accessKey, time);
         }
-        ClientWorker worker = new ClientWorker(new LogstashLogHubProcessorFactory(checkpointSecond, includeMeta, consumerGroup+"/"+consumer), config);
+        ClientWorker worker = new ClientWorker(new LogstashLogHubProcessorFactory(checkpointSecond, includeMeta, consumerGroup+"/"+consumer, queueCache), config);
         Thread thread = new Thread(worker);
         //Thread运行之后，Client Worker会自动运行，ClientWorker扩展了Runnable接口。
         thread.start();

@@ -49,7 +49,8 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     end
     @process_pid = "_#{Process.pid}"
     @logger.info("Running logstash-input-logservice",:local_address => @local_address)
-    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta)
+    @blockingQueue = java.util.concurrent.LinkedBlockingQueue.new(1000)
+    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue)
    
     consume(queue)
 
@@ -62,10 +63,10 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   
   def consume(queue)
          while !stop?
-             while !Processor.LogstashLogHubProcessor.queueCache.isEmpty
+             while !@blockingQueue.isEmpty
                  begin
-                     textmap = Processor.LogstashLogHubProcessor.queueCache.poll
-                     event = LogStash::Event.new(textmap)
+                     msg = @blockingQueue.poll
+                     event = LogStash::Event.new(msg)
                      decorate(event)
                      queue << event
                  rescue Exception => e
