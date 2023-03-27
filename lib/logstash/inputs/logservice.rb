@@ -41,6 +41,8 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   config :proxy_domain, :validate => :string, :default => nil
   config :proxy_workstation, :validate => :string, :default => nil
 
+  config :fetch_interval_millis, :validate => :number, :default => 200
+
   Processor = com.aliyun.log.logstash
   public
   def register
@@ -58,7 +60,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     @process_pid = "_#{Process.pid}"
     @logger.info("Running logstash-input-logservice",:local_address => @local_address)
     @blockingQueue = java.util.concurrent.LinkedBlockingQueue.new(1000)
-    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue, @proxy_host, @proxy_port, @proxy_username, @proxy_password, @proxy_domain, @proxy_workstation)
+    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue, @proxy_host, @proxy_port, @proxy_username, @proxy_password, @proxy_domain, @proxy_workstation, @fetch_interval_millis)
    
     consume(queue)
 

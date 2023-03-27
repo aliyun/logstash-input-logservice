@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'logstash-input-sls'
-  s.version         = '0.0.13'
+  s.version         = '0.0.14'
   s.licenses = ['MIT']
   s.summary = "This sls input streams a string at a definable interval."
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
