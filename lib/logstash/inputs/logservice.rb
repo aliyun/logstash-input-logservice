@@ -90,7 +90,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
                      retry
                  end
              end
-          Stud.stoppable_sleep(@checkpoint_second) { stop? }
+             sleep(0.01)
         end # loop
 
   end
