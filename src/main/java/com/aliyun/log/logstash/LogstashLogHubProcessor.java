@@ -1,10 +1,6 @@
 package com.aliyun.log.logstash;
 
-import com.aliyun.openservices.log.common.FastLog;
-import com.aliyun.openservices.log.common.FastLogContent;
-import com.aliyun.openservices.log.common.FastLogGroup;
-import com.aliyun.openservices.log.common.FastLogTag;
-import com.aliyun.openservices.log.common.LogGroupData;
+import com.aliyun.openservices.log.common.*;
 import com.aliyun.openservices.loghub.client.ILogHubCheckPointTracker;
 import com.aliyun.openservices.loghub.client.exceptions.LogHubCheckPointException;
 import com.aliyun.openservices.loghub.client.interfaces.ILogHubProcessor;
@@ -12,7 +8,6 @@ import com.aliyun.openservices.loghub.client.interfaces.ILogHubProcessorFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +81,6 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
         for (LogGroupData logGroup : logGroups) {
             FastLogGroup flg = logGroup.GetFastLogGroup();
             int n = flg.getLogsCount();
-            List<Map<String, String>> events = new ArrayList<>(n);
             for (int lIdx = 0; lIdx < n; ++lIdx) {
                 FastLog log = flg.getLogs(lIdx);
                 int tagCount = flg.getLogTagsCount();
