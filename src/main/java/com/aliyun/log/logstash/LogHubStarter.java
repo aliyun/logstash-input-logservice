@@ -6,6 +6,7 @@ import com.aliyun.openservices.loghub.client.exceptions.LogHubClientWorkerExcept
 
 import java.sql.Timestamp;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 
 import static javax.management.timer.Timer.ONE_SECOND;
@@ -13,7 +14,9 @@ import static javax.management.timer.Timer.ONE_SECOND;
 
 public class LogHubStarter {
 
-    public static void startWorker(String endpoint, String accessId, String accessKey,
+    private ClientWorker worker;
+
+    public void startWorker(String endpoint, String accessId, String accessKey,
                                    String project, String logstore,
                                    String consumerGroup, String consumer, String position,
                                    int checkpointSecond, boolean includeMeta, BlockingQueue<Map<String, String>> queueCache,
@@ -23,6 +26,7 @@ public class LogHubStarter {
         // 第二个参数是消费者名称，同一个消费组下面的消费者名称必须不同，可以使用相同的消费组名称，
         // 不同的消费者名称在多台机器上启动多个进程，来均衡消费一个Logstore，这个时候消费者名称可以使用机器ip来区分。
         LogHubConfig config;
+        consumer += "_"+getRandomString(5);
         if ("begin".equals(position)) {
             config = new LogHubConfig(consumerGroup, consumer, endpoint, project, logstore, accessId, accessKey, LogHubConfig.ConsumePosition.BEGIN_CURSOR);
         } else if ("end".equals(position)) {
@@ -52,8 +56,23 @@ public class LogHubStarter {
         if (fetchIntervalMillis>0) {
             config.setFetchIntervalMillis(fetchIntervalMillis);
         }
-        ClientWorker worker = new ClientWorker(new LogstashLogHubProcessorFactory(checkpointSecond, includeMeta, consumerGroup+"/"+consumer, queueCache), config);
+        worker = new ClientWorker(new LogstashLogHubProcessorFactory(checkpointSecond, includeMeta, consumerGroup+"/"+consumer, queueCache), config);
         Thread thread = new Thread(worker);
         thread.start();
+    }
+
+    public void stopWorker(){
+        worker.shutdown();
+    }
+
+    public static String getRandomString(int length){
+        String str="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        Random random=new Random();
+        StringBuffer sb=new StringBuffer();
+        for(int i=0;i<length;i++){
+            int number=random.nextInt(62);
+            sb.append(str.charAt(number));
+        }
+        return sb.toString();
     }
 }

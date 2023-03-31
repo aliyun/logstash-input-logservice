@@ -58,10 +58,14 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
         @ip_suffix = '_' + @local_address
     end
     @process_pid = "_#{Process.pid}"
-    @logger.info("Running logstash-input-logservice",:local_address => @local_address)
+    @logger.info("Running logstash-input-logservice", :endpoint => @endpoint, :project => @project,
+    :logstore => @logstore, :consumer_group => @consumer_group, :consumer_name => @consumer_name,
+    :position => @position, :checkpoint_second => @checkpoint_second, :include_meta => @include_meta,
+    :consumer_name_with_ip => @consumer_name_with_ip, :local_address => @local_address)
     @blockingQueue = java.util.concurrent.LinkedBlockingQueue.new(1000)
-    LogHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue, @proxy_host, @proxy_port, @proxy_username, @proxy_password, @proxy_domain, @proxy_workstation, @fetch_interval_millis)
-   
+    @logHubStarter = LogHubStarter.new()
+    @logHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue, @proxy_host, @proxy_port, @proxy_username, @proxy_password, @proxy_domain, @proxy_workstation, @fetch_interval_millis)
+
     consume(queue)
 
     rescue Exception => e
@@ -97,6 +101,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     #  * close sockets (unblocking blocking reads/accepts)
     #  * cleanup temporary files
     #  * terminate spawned threads
+    @logHubStarter.stopWorker()
   end
 
   def teardown
