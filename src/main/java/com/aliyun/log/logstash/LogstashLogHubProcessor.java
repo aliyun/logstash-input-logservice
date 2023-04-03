@@ -1,10 +1,6 @@
 package com.aliyun.log.logstash;
 
-import com.aliyun.openservices.log.common.FastLog;
-import com.aliyun.openservices.log.common.FastLogContent;
-import com.aliyun.openservices.log.common.FastLogGroup;
-import com.aliyun.openservices.log.common.FastLogTag;
-import com.aliyun.openservices.log.common.LogGroupData;
+import com.aliyun.openservices.log.common.*;
 import com.aliyun.openservices.loghub.client.ILogHubCheckPointTracker;
 import com.aliyun.openservices.loghub.client.exceptions.LogHubCheckPointException;
 import com.aliyun.openservices.loghub.client.interfaces.ILogHubProcessor;
@@ -16,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static javax.management.timer.Timer.ONE_SECOND;
 
@@ -40,26 +37,36 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
     //在每次更新checkpoint的时候输出，并置为0
     private long mNowLogs = 0;
 
-    private String consumerName;
+    private final String consumerName;
 
-    private BlockingQueue<Map<String, String>> queueCache;
+    private final BlockingQueue<Map<String, String>> queueCache;
+
+    private final AtomicBoolean isStopFlag;
+
     @Override
     public void initialize(int shardId) {
         this.shardId = shardId;
     }
-    
-    public LogstashLogHubProcessor(int checkpointSecond, boolean includeMeta, String consumerName, BlockingQueue<Map<String, String>> queueCache) {
+
+    public LogstashLogHubProcessor(int checkpointSecond, boolean includeMeta, String consumerName,
+                                   BlockingQueue<Map<String, String>> queueCache,
+                                   AtomicBoolean isStopFlag) {
         this.checkpointSecond = checkpointSecond;
         this.includeMeta = includeMeta;
         this.consumerName = consumerName;
         this.queueCache = queueCache;
+        this.isStopFlag = isStopFlag;
     }
 
-    protected void showContent(Map<String, String> logMap) {
+    protected boolean addToQueue(Map<String, String> event) {
         try {
-            this.queueCache.put(logMap);
+            this.queueCache.put(event);
+            return true;
         } catch (InterruptedException e) {
-            logger.error("put result data to queue cache failed!", e);
+            if (isStopFlag.get()) {
+                return false;
+            }
+            throw new RuntimeException("Put events to queue exception", e);
         }
     }
 
@@ -67,28 +74,35 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
     @Override
     public String process(List<LogGroupData> logGroups,
                           ILogHubCheckPointTracker checkPointTracker) {
+        long startTime = System.currentTimeMillis();
         logger.info(consumerName + " process_in_shardId:" + shardId);
         int count = 0;
         // 这里简单的将获取到的数据打印出来
         for (LogGroupData logGroup : logGroups) {
             FastLogGroup flg = logGroup.GetFastLogGroup();
-            for (int lIdx = 0; lIdx < flg.getLogsCount(); ++lIdx) {
+            int n = flg.getLogsCount();
+            for (int lIdx = 0; lIdx < n; ++lIdx) {
                 FastLog log = flg.getLogs(lIdx);
-                Map<String, String> logMap = new HashMap<>();
+                int tagCount = flg.getLogTagsCount();
+                int logCount = log.getContentsCount();
+                Map<String, String> logMap = new HashMap<>(includeMeta ? 3 + tagCount + logCount : logCount);
                 if (includeMeta) {
                     logMap.put("__time__", String.valueOf(log.getTime()));
                     logMap.put("__source__", flg.getSource());
                     logMap.put("__topic__", flg.getTopic());
-                    for (int tagIdx = 0; tagIdx < flg.getLogTagsCount(); ++tagIdx) {
+                    for (int tagIdx = 0; tagIdx < tagCount; ++tagIdx) {
                         FastLogTag logtag = flg.getLogTags(tagIdx);
                         logMap.put("__tag__:" + logtag.getKey(), logtag.getValue());
                     }
                 }
-                for (int cIdx = 0; cIdx < log.getContentsCount(); ++cIdx) {
+                for (int cIdx = 0; cIdx < logCount; ++cIdx) {
                     FastLogContent content = log.getContents(cIdx);
                     logMap.put(content.getKey(), content.getValue());
                 }
-                showContent(logMap);
+                if (!addToQueue(logMap)) {
+                    logger.warn("LogStash plugin has been stopped");
+                    return null;
+                }
             }
             count = count + flg.getLogsCount();
             mTotalLogs = mTotalLogs + flg.getLogsCount();
@@ -105,14 +119,14 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
                 //参数true表示立即将checkpoint更新到服务端，为false会将checkpoint缓存在本地，后台默认隔60s会将checkpoint刷新到服务端。
                 checkPointTracker.saveCheckPoint(true);
                 mNowLogs = 0;
-                logger.info(consumerName + " process_shardId:" + shardId +" saveCheckPoint " + checkPointTracker.getCheckPoint());
+                logger.info(consumerName + " process_shardId:" + shardId + " saveCheckPoint " + checkPointTracker.getCheckPoint());
             } catch (LogHubCheckPointException e) {
                 e.printStackTrace();
                 logger.error(consumerName + " process_shardId:" + shardId + " saveCheckPoint ", e);
             }
             mLastCheckTime = curTime;
         }
-        logger.info(consumerName + " process_out_shardId:" + shardId);
+        logger.info("{} process_out_shardId: {}, millisecond: {}", consumerName, shardId, System.currentTimeMillis() - startTime);
         return null;
     }
 
@@ -122,22 +136,12 @@ public class LogstashLogHubProcessor implements ILogHubProcessor {
         //将消费断点保存到服务端。
         try {
             checkPointTracker.saveCheckPoint(true);
-            logger.info(consumerName + " shutdown_shardId:" + shardId +" saveCheckPoint:" + checkPointTracker.getCheckPoint());
+            logger.info(consumerName + " shutdown_shardId:" + shardId + " saveCheckPoint:" + checkPointTracker.getCheckPoint());
         } catch (LogHubCheckPointException e) {
             e.printStackTrace();
             logger.error(consumerName + " shutdown_shardId:" + shardId + " shutdown ", e);
         }
     }
-
-    public void setCheckpointSecond(int checkpointSecond) {
-        this.checkpointSecond = checkpointSecond;
-    }
-
-
-    public void setIncludeMeta(boolean includeMeta) {
-        this.includeMeta = includeMeta;
-    }
-
 }
 
 class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
@@ -146,17 +150,24 @@ class LogstashLogHubProcessorFactory implements ILogHubProcessorFactory {
     private boolean includeMeta;
     private String consumerName;
     private BlockingQueue<Map<String, String>> queueCache;
-    
-    public LogstashLogHubProcessorFactory(int checkpointSecond, boolean includeMeta, String consumerName, BlockingQueue<Map<String, String>> queueCache) {
-       this.checkpointSecond = checkpointSecond;
-       this.includeMeta = includeMeta;
-       this.consumerName = consumerName;
-       this.queueCache = queueCache;
+
+    private AtomicBoolean isStopFlag;
+
+    public LogstashLogHubProcessorFactory(int checkpointSecond,
+                                          boolean includeMeta,
+                                          String consumerName,
+                                          BlockingQueue<Map<String, String>> queueCache,
+                                          AtomicBoolean isStopFlag) {
+        this.checkpointSecond = checkpointSecond;
+        this.includeMeta = includeMeta;
+        this.consumerName = consumerName;
+        this.queueCache = queueCache;
+        this.isStopFlag = isStopFlag;
     }
 
     @Override
     public ILogHubProcessor generatorProcessor() {
         // 生成一个消费实例
-        return new LogstashLogHubProcessor(this.checkpointSecond, this.includeMeta, this.consumerName, this.queueCache);
+        return new LogstashLogHubProcessor(this.checkpointSecond, this.includeMeta, this.consumerName, this.queueCache, this.isStopFlag);
     }
 }
