@@ -33,6 +33,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   config :checkpoint_second, :validate => :number, :default => 30
   config :include_meta, :validate => :boolean, :default => true
   config :consumer_name_with_ip, :validate => :boolean, :default => true
+  config :query, :validate => :string, :default => nil
 
   config :proxy_host, :validate => :string, :default => nil
   config :proxy_port, :validate => :number, :default => 0
@@ -48,7 +49,8 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
   def register
     @logger.info("Init logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
         :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,
-        :checkpoint_second => @checkpoint_second, :include_meta => @include_meta ,:consumer_name_with_ip => @consumer_name_with_ip)
+        :checkpoint_second => @checkpoint_second, :include_meta => @include_meta ,:consumer_name_with_ip => @consumer_name_with_ip,
+        :query => @query)
   end
 
   def run(queue)
@@ -64,14 +66,15 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
     :consumer_name_with_ip => @consumer_name_with_ip, :local_address => @local_address)
     @blockingQueue = java.util.concurrent.LinkedBlockingQueue.new(1000)
     @logHubStarter = LogHubStarter.new()
-    @logHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue, @proxy_host, @proxy_port, @proxy_username, @proxy_password, @proxy_domain, @proxy_workstation, @fetch_interval_millis)
+    @logHubStarter.startWorker(@endpoint, @access_id, @access_key, @project, @logstore, @consumer_group, @consumer_name + @ip_suffix + @process_pid, @position, @checkpoint_second, @include_meta, @blockingQueue, @proxy_host, @proxy_port, @proxy_username, @proxy_password, @proxy_domain, @proxy_workstation, @fetch_interval_millis, @query)
 
     consume(queue)
 
     rescue Exception => e
         @logger.error("Start logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
             :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,
-            :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip, :exception => e)
+            :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip,
+            :query => @query, :exception => e)
 
   end
 
@@ -86,7 +89,8 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
                  rescue Exception => e
                      @logger.error("Consume logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
                                  :consumer_group => @consumer_group, :consumer_name => @consumer_name, :position => @position,
-                                 :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip, :exception => e)
+                                 :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip,
+                                 :query => @query, :exception => e)
                      retry
                  end
              end
