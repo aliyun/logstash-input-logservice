@@ -59,6 +59,7 @@ output {
 |checkpoint_second|number| 否|每隔几秒 checkpoint 一次，建议10-60秒，不能低于10秒，默认30秒|
 |include_meta|boolean| 否|传入日志是否包含meta，Meta包括日志source、time、tag、topic，默认为 true|
 |consumer_name_with_ip|boolean| 否|消费者名是否包含ip地址，默认为 true，分布式协同消费下必须设置为true|
+|query|string| false | SLS SPL, refer: https://help.aliyun.com/zh/sls/user-guide/spl-overview  |
 
 
 ## 安装插件

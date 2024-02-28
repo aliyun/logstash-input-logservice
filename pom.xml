@@ -17,7 +17,7 @@
         <dependency>
             <groupId>com.aliyun.openservices</groupId>
             <artifactId>loghub-client-lib</artifactId>
-            <version>0.6.45</version>
+            <version>0.6.47</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
         <dependency>
