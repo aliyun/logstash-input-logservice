@@ -13,7 +13,7 @@ java_import 'com.aliyun.log.logstash.LogHubStarter'
 java_import 'com.aliyun.log.logstash.LogstashLogHubProcessor'
 
 class LogStash::Inputs::LogService < LogStash::Inputs::Base
-  attr_accessor :worker
+  # attr_accessor :worker
   def initialize(*args)
     super(*args)
   end
@@ -43,7 +43,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
 
   config :fetch_interval_millis, :validate => :number, :default => 200
 
-  Processor = com.aliyun.log.logstash
+  # Processor = com.aliyun.log.logstash
   public
   def register
     @logger.info("Init logstash-input-logservice", :endpoint => @endpoint, :project => @project, :logstore => @logstore,
@@ -74,7 +74,7 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
             :checkpoint_second => @checkpoint_second, :include_meta => @include_meta, :consumer_name_with_ip => @consumer_name_with_ip, :exception => e)
 
   end
-  
+
   def consume(queue)
          while !stop?
              while !@blockingQueue.isEmpty
@@ -90,17 +90,11 @@ class LogStash::Inputs::LogService < LogStash::Inputs::Base
                      retry
                  end
              end
-          Stud.stoppable_sleep(@checkpoint_second) { stop? }
+             sleep(0.01)
         end # loop
 
-  end  
-
+  end
   def stop
-    # nothing to do in this case so it is not necessary to define stop
-    # examples of common "stop" tasks:
-    #  * close sockets (unblocking blocking reads/accepts)
-    #  * cleanup temporary files
-    #  * terminate spawned threads
     @logHubStarter.stopWorker()
   end
 
