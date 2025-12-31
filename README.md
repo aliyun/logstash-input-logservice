@@ -22,6 +22,7 @@ input {
   checkpoint_second => 30
   include_meta => true
   consumer_name_with_ip => true
+  processor => "your SLS SPL Processor"
   }
 }
 
@@ -46,6 +47,8 @@ This plugin supports the following configuration options
 |checkpoint_second|number| false|Time to checkpoint,default is 30|
 |include_meta|boolean| false|Whether the meta is included,default is true|
 |consumer_name_with_ip|boolean| false|Whether the consumer name has ip,default is true,Must be set to true under distributed collaborative consumption|
+|processor|string| false | SLS SPL Processor, refer: https://help.aliyun.com/zh/sls/data-consumption-processor/ |
+
 
 
 ## Install the plugin
